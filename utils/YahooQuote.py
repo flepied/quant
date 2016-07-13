@@ -1,4 +1,4 @@
-LICENSE="""
+LICENSE = """
 This module is released under the GNU Lesser General Public License,
 the wording of which is available on the GNU website, http://www.gnu.org
 """
@@ -16,7 +16,7 @@ But now, the back-end has been completely re-written.
 
 The original version stored stock quotes in a MetaKit database
 file.  Since metakit isn't available as a Ubuntu package, the
-cache storage has been changed to sqlite3 to be as portable 
+cache storage has been changed to sqlite3 to be as portable
 as possible.
 
 Usage Examples::
@@ -40,9 +40,9 @@ Usage Examples::
  <Ticker:msft>  # note the 'dji/msft', meaning that MS is on DJI index
 
  >>> ms[20070604:20070609]  # get range of dates as slice - Jun4 - Jun8
- [<Quote:msft/20070604:m=+0.30 o=30.42 c=30.72 l=30.40 h=30.76 a=30.72 v=41434500>, 
- <Quote:msft/20070605:m=-0.04 o=30.62 c=30.58 l=30.33 h=30.63 a=30.58 v=44265000>, 
- <Quote:msft/20070606:m=-0.08 o=30.37 c=30.29 l=30.25 h=30.53 a=30.29 v=38217500>, 
+ [<Quote:msft/20070604:m=+0.30 o=30.42 c=30.72 l=30.40 h=30.76 a=30.72 v=41434500>,
+ <Quote:msft/20070605:m=-0.04 o=30.62 c=30.58 l=30.33 h=30.63 a=30.58 v=44265000>,
+ <Quote:msft/20070606:m=-0.08 o=30.37 c=30.29 l=30.25 h=30.53 a=30.29 v=38217500>,
  <Quote:msft/20070607:m=-0.40 o=30.02 c=29.62 l=29.59 h=30.29 a=29.62 v=71971400>]
 
  >>> lastThu = ms[20070614]  # fetch a single trading day
@@ -61,23 +61,23 @@ Usage Examples::
 Read the API documentation for further features/methods
 """
 
-import os, sys, re, traceback, getopt, time
-#import strptime
-import urllib
-import weakref, gc
 import csv
-import logging
-import Queue, thread, threading
 import datetime
+import gc
+import logging
+import os
 import sqlite3
+import time
+import urllib
+import weakref
 
 Y2KCUTOFF=60
 __version__ = "0.4"
 
-CACHE='~/.quant/stocks.db'
+CACHE = '~/.quant/stocks.db'
 
 MONTH2NUM = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-  'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
+             'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
 
 DAYSECS = 60 * 60 * 24
 
@@ -106,22 +106,22 @@ indexes = {
     "NTM": {"name": "NYSE TMT", "country": "USA"},
     "NUS": {"name": "NYSE US 100", "country": "USA"},
     "NWL": {"name": "NYSE World Leaders", "country": "USA"},
-    "IXBK":{"name": "NASDAQ Bank", "country": "USA"},
+    "IXBK": {"name": "NASDAQ Bank", "country": "USA"},
     "NBI": {"name": "NASDAQ Biotech", "country": "USA"},
-    "IXIC":{"name": "NASDAQ Composite", "country": "USA"},
+    "IXIC": {"name": "NASDAQ Composite", "country": "USA"},
     "IXK": {"name": "NASDAQ Computer", "country": "USA"},
     "IXF": {"name": "NASDAQ Financial 100", "country": "USA"},
-    "IXID":{"name": "NASDAQ Industrial", "country": "USA"},
-    "IXIS":{"name": "NASDAQ Insurance", "country": "USA"},
+    "IXID": {"name": "NASDAQ Industrial", "country": "USA"},
+    "IXIS": {"name": "NASDAQ Insurance", "country": "USA"},
     "IXQ": {"name": "NASDAQ NNM Composite", "country": "USA"},
-    "IXFN":{"name": "NASDAQ Other Finance", "country": "USA"},
-    "IXUT":{"name": "NASDAQ Telecommunications", "country": "USA"},
-    "IXTR":{"name": "NASDAQ Transportation", "country": "USA"},
+    "IXFN": {"name": "NASDAQ Other Finance", "country": "USA"},
+    "IXUT": {"name": "NASDAQ Telecommunications", "country": "USA"},
+    "IXTR": {"name": "NASDAQ Transportation", "country": "USA"},
     "NDX": {"name": "NASDAQ-100 (DRM)", "country": "USA"},
     "OEX": {"name": "S&P 100 Index", "country": "USA"},
     "MID": {"name": "S&P 400 Midcap Index", "country": "USA"},
-    "GSPC":{"name": "S&P 500 Index", "country": "USA"},
-    "SPSUPX":{"name": "S&P Composite 1500 Index", "country": "USA"},
+    "GSPC": {"name": "S&P 500 Index", "country": "USA"},
+    "SPSUPX": {"name": "S&P Composite 1500 Index", "country": "USA"},
     "SML": {"name": "S&P Smallcap 600 Index", "country": "USA"},
     "XAX": {"name": "AMEX COMPOSITE INDEX", "country": "USA"},
     "IIX": {"name": "AMEX INTERACTIVE WEEK INTERNET", "country": "USA"},
@@ -175,7 +175,7 @@ class Cache:
     """
     Class that provides the cache using sqllite.
     """
-    HISTORY_COL_DEF=(
+    HISTORY_COL_DEF = (
         "stock_id integer primary key autoincrement",
         "symbol text not null",
         "date date",
@@ -195,30 +195,39 @@ class Cache:
         self.db = sqlite3.connect(dbPath)
 
         cursor = self.db.cursor()
-	cursor.execute("CREATE TABLE IF NOT EXISTS history (%s)" % (", ".join(Cache.HISTORY_COL_DEF)))
-	cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS ticker ON history (symbol, date ASC)")
-	cursor.close()
+        cursor.execute("CREATE TABLE IF NOT EXISTS history (%s)" %
+                       (", ".join(Cache.HISTORY_COL_DEF)))
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS ticker "
+                       "ON history (symbol, date ASC)")
+        cursor.close()
 
     def symbols(self):
         """Return a list of symbols that have been cached."""
-	cursor = self.db.cursor()
-	symbols = cursor.execute("select distinct symbol from history").fetchall()
-	cursor.close()
+        cursor = self.db.cursor()
+        symbols = cursor.execute("select distinct symbol "
+                                 "from history").fetchall()
+        cursor.close()
         return [x[0] for x in symbols]
 
     def get(self, symbol, wantDate, priorDate=None):
-	cursor = self.db.cursor()
-        if priorDate == None:
-            hist = cursor.execute("SELECT * FROM HISTORY WHERE (date='%s' and symbol='%s')" % (wantDate, symbol)).fetchall()
+        cursor = self.db.cursor()
+        if priorDate is None:
+            hist = cursor.execute(
+                "SELECT * FROM HISTORY WHERE (date='%s' and "
+                "symbol='%s')" % (wantDate, symbol)).fetchall()
         else:
-            hist = cursor.execute("SELECT * FROM HISTORY WHERE (date>='%s' and date<='%s' and symbol='%s')" % (priorDate, wantDate, symbol)).fetchall()
+            hist = cursor.execute("SELECT * FROM HISTORY WHERE (date>='%s' "
+                                  "and date<='%s' and symbol='%s')" %
+                                  (priorDate, wantDate, symbol)).fetchall()
         return [Quote.fromRow(x) for x in hist]
 
     def init(self, symbol, wantDate, priorDate):
         d = priorDate
         while d <= wantDate:
             cursor = self.db.cursor()
-            cursor.execute("INSERT OR REPLACE INTO HISTORY VALUES (NULL, '%s', '%s', NULL, NULL, NULL, NULL, NULL, NULL)" % (symbol, d))
+            cursor.execute("INSERT OR REPLACE INTO HISTORY VALUES "
+                           "(NULL, '%s', '%s', NULL, NULL, NULL, NULL, NULL, "
+                           "NULL)" % (symbol, d))
             cursor.close()
             d += 1
         self.db.commit()
@@ -226,14 +235,18 @@ class Cache:
     def put(self, quotes):
         for quote in quotes:
             cursor = self.db.cursor()
-            cursor.execute("INSERT OR REPLACE INTO HISTORY VALUES (NULL, '%(symbol)s', '%(date)s', '%(open)s', %(close)f, %(low)f, %(high)f, %(volume)f, %(adjclose)f)" % quote.__dict__)
+            cursor.execute("INSERT OR REPLACE INTO HISTORY VALUES "
+                           "(NULL, '%(symbol)s', '%(date)s', '%(open)s', "
+                           "%(close)f, %(low)f, %(high)f, %(volume)f, "
+                           "%(adjclose)f)" % quote.__dict__)
             cursor.close()
         self.db.commit()
 
     def purge(self, symbol):
-	cursor = self.db.cursor()
-	hist = cursor.execute("DELETE FROM HISTORY WHERE (symbol='%s')" % (symbol)).fetchall()
-	cursor.close()
+        cursor = self.db.cursor()
+        cursor.execute("DELETE FROM HISTORY WHERE (symbol='%s')" %
+                       (symbol)).fetchall()
+        cursor.close()
         self.db.commit()
 
     def __del__(self):
@@ -288,10 +301,12 @@ class Market:
 
     def __getitem__(self, symbol):
         """
-        If 'symbol' is an index, returns an L{Index} object for that index symbol.
+        If 'symbol' is an index, returns an L{Index} object for that index
+        symbol.
 
         If 'symbol' is an individual stock symbol, then returns a L{Ticker}
         object for that stock
+
         """
         su = symbol.upper()
         if su in self.indexes:
@@ -310,25 +325,24 @@ class Market:
 
         return ticker
 
-
     def fetchHistory(self):
-        """
-        Fetches all history for all known stocks
+        """Fetches all history for all known stocks
 
         This can take an hour or more, even with a broadband connection, and
         will leave you with a cache file of over 100MB.
 
-        If you're only interested in specific stocks or indexes, you might prefer
-        to invoke L{Index.fetchHistory} or L{Ticker.FetchHistory}, respectively.
+        If you're only interested in specific stocks or indexes, you
+        might prefer to invoke L{Index.fetchHistory} or
+        L{Ticker.FetchHistory}, respectively.
         """
         logging.info("fetching history for all stocks")
         if len(self.indexes.values()) == 0:
-	    self.loadIndexes()
+            self.loadIndexes()
 
         try:
             for index in self.indexes.values():
                 # fill the queue with callable methods
-		logging.debug("fetching index %s", index)
+                logging.debug("fetching index %s", index)
                 index.fetchHistory()
         except KeyboardInterrupt:
             logging.info("interrupted by user")
@@ -339,7 +353,7 @@ class Market:
         you have previously invoked L{Market.fetchHistory}
         """
         for symbol in self.cache.symbols():
-	    logging.debug("updating symbol %s", symbol)
+            logging.debug("updating symbol %s", symbol)
             ticker = self[symbol]
             ticker.updateHistory()
 
@@ -360,12 +374,11 @@ class Index:
 
         # fetch the components from yahoo
         self.components = []
-	self.fetchFromYahoo()
+        self.fetchFromYahoo()
 
     def __repr__(self):
 
         return "<Index:%s>" % self.symbol
-
 
     def load(self, row):
         """
@@ -379,7 +392,8 @@ class Index:
         retrieves a list of component stocks for this index from the
         Yahoo Finance website
         """
-        logging.debug("Refreshing list of component stocks for %s" % self.symbol)
+        logging.debug("Refreshing list of component stocks for %s" %
+                      self.symbol)
 
         # create args
         parmsDict = {
@@ -388,7 +402,7 @@ class Index:
             "e": ".csv",
             "h": 0,
             }
-        parms = "&".join([("%s=%s" % (k,v)) for k,v in parmsDict.items()])
+        parms = "&".join([("%s=%s" % (k, v)) for k, v in parmsDict.items()])
 
         # construct full URL
         url = "http://download.finance.yahoo.com/d/quotes.csv?%s" % parms
@@ -423,7 +437,6 @@ class Index:
         return self.market[self.components[symbol]]
 
 
-
 class Ticker:
     """
     Represents the prices of a single ticker symbol.
@@ -441,7 +454,7 @@ class Ticker:
         for a single ticker symbol
 
         Treat objects of this class like an array, where you can get
-        a single item (date) to return a Quote object for the symbol 
+        a single item (date) to return a Quote object for the symbol
         and date, or get a slice, to return a list of Quote objects
         for the date range.
 
@@ -503,16 +516,17 @@ class Ticker:
 
         if not isinstance(wantDate, QuoteDate):
             wantDate = QuoteDate(wantDate)
-        if priorDate != None and not isinstance(priorDate, QuoteDate):
+        if priorDate is not None and not isinstance(priorDate, QuoteDate):
             priorDate = QuoteDate(priorDate)
 
         # attempted prescience?
         if wantDate > now or priorDate > now:
-            raise IndexError("Prescience disabled by order of Homeland Security")
+            raise IndexError("Prescience disabled by order "
+                             "of Homeland Security")
 
         # no, seek it from db or yahoo
         quotes = self.market.cache.get(self.symbol, wantDate, priorDate)
-        if priorDate == None:
+        if priorDate is None:
             expectedQuotes = 1
         else:
             expectedQuotes = (wantDate - priorDate) + 1
@@ -555,16 +569,16 @@ class Ticker:
             raise Exception("Invalid date %s: not a QuoteDate" % wantDate)
 
         # go some days before and after
-        if priorDate == None:
+        if priorDate is None:
             priorDate = wantDate - fetchWindow + 1
         year1, month1, day1 = priorDate.toYmd()
         year2, month2, day2 = (wantDate + 1).toYmd()
 
         self.market.cache.init(self.symbol, wantDate, priorDate)
         logging.info("fetching %s for %s-%s-%s to %s-%s-%s" % (
-                    self.symbol,
-                    year1, month1, day1,
-                    year2, month2, day2))
+            self.symbol,
+            year1, month1, day1,
+            year2, month2, day2))
 
         baseUrl = self.baseUrlHistory
         parms = [
@@ -586,10 +600,10 @@ class Ticker:
         # get the raw csv lines from Yahoo
         resp = urllib.urlopen(url)
         if resp.getcode() == 404:
-            logging.info("%s: No history for %04d-%02d-%02d to %04d-%02d-%02d" % (
-                        self.symbol,
-                        year1, month1, day1,
-                        year2, month2, day2))
+            logging.info("%s: No history for %04d-%02d-%02d to %04d-%02d-%02d"
+                         % (self.symbol,
+                            year1, month1, day1,
+                            year2, month2, day2))
             return
         lines = resp.readlines()
 
@@ -600,16 +614,17 @@ class Ticker:
 
         quotes = []
         try:
-            quotes = [Quote.fromYahooHistory(self.symbol, line) for line in lines]
+            quotes = [Quote.fromYahooHistory(self.symbol, line)
+                      for line in lines]
         except:
             logging.exception("Failed to process yahoo data")
 
         if len(quotes) == 0:
-            logging.info("%s: No history for %04d-%02d-%02d to %04d-%02d-%02d" % (
-                        self.symbol,
-                        year1, month1, day1,
-                        year2, month2, day2))
-        else:        
+            logging.info("%s: No history for %04d-%02d-%02d to %04d-%02d-%02d"
+                         % (self.symbol,
+                            year1, month1, day1,
+                            year2, month2, day2))
+        else:
             # sort quotes into ascending order and fill in any missing dates
             quotes.sort(lambda q1, q2: cmp(q1.date, q2.date))
             self.market.cache.put(quotes)
@@ -620,17 +635,17 @@ class Ticker:
         do this once, and thereafter, invoke
         L{Ticker.updateHistory} to keep the history up to date
         """
-        if start == None:
+        if start is None:
             startDay = QuoteDate.fromYmd(1950, 1, 1)
         else:
             startDay = QuoteDate(end)
 
-        if end == None:
+        if end is None:
             endDay = QuoteDate.now()
         else:
             endDay = QuoteDate(start)
 
-	cursor = self.market.cache.purge(self.symbol)
+        cursor = self.market.cache.purge(self.symbol)
 
         try:
             # now get the whole history, lock stock and barrel
@@ -646,12 +661,14 @@ class Ticker:
         method unless you have invoked L{Ticker.fetchHistory} at
         some time in the past.
         """
-        if end == None:
+        if end is None:
             end = QuoteDate.now()
-        if start == None:
+        if start is None:
             cursor = self.market.db
-            lastdate = cursor.execute("select MAX(date) from history where (symbol='%s')" % self.symbol).fetchone()[0]
-	    start = QuoteDate(lastdate) + 1
+            lastdate = cursor.execute("select MAX(date) from history "
+                                      "where (symbol='%s')" %
+                                      self.symbol).fetchone()[0]
+            start = QuoteDate(lastdate) + 1
 
         if not isinstance(start, QuoteDate):
             start = QuoteDate(start)
@@ -665,19 +682,20 @@ class Ticker:
         if (len(quotes) - 1) != (end - start):
             self._fetch(end, start)
 
+
 class Quote:
     """
     dumb object which wraps quote data
     """
     def __init__(self, symbol, **kw):
         self.symbol = symbol
-        self.date=None
-        self.open=None
-        self.close=None
-        self.low=None
-        self.high=None
-        self.volume=None
-        self.adjclose=None
+        self.date = None
+        self.open = None
+        self.close = None
+        self.low = None
+        self.high = None
+        self.volume = None
+        self.adjclose = None
         self.__dict__.update(kw)
 
     # Normalization concept from http://luminouslogic.com/how-to-normalize-historical-data-for-splits-dividends-etc.htm
@@ -712,24 +730,24 @@ class Quote:
     #        quoteDict['volume'] = float(vol)
     #        quoteDict['adjclose'] = float(adjclose)
 
-
-        if None in (self.open, self.close, self.low, self.high, self.adjclose, self.volume):
+        if None in (self.open, self.close, self.low, self.high, self.adjclose,
+                    self.volume):
             return "<Quote:%s/%s>" % (self.symbol, self.date)
-        else: 
+        else:
             if self.close > self.open:
                 m = "+%.02f" % (self.close - self.open)
             elif self.close < self.open:
                 m = "%.02f" % (self.close - self.open)
             else:
                 m = "0.00"
-            return "<Quote:%s/%s:m=%s o=%.2f c=%.2f l=%.2f h=%.2f a=%.2f v=%d>" \
-                    % (self.symbol,
-                       self.date,
-                       m,
-                       self.open, self.close,
-                       self.low, self.high,
-                       self.adjclose,
-                       self.volume)
+            return("<Quote:%s/%s:m=%s o=%.2f c=%.2f l=%.2f h=%.2f a=%.2f v=%d>"
+                   % (self.symbol,
+                      self.date,
+                      m,
+                      self.open, self.close,
+                      self.low, self.high,
+                      self.adjclose,
+                      self.volume))
 
     def fromYahooHistory(symbol, line):
         """
@@ -745,7 +763,7 @@ class Quote:
         ydate, open, high, low, close, vol, adjclose = items
 
         # determine date of this next result
-        quote = Quote(symbol, 
+        quote = Quote(symbol,
                       date=QuoteDate.fromYahoo(ydate),
                       open=float(open),
                       close=float(close),
@@ -764,7 +782,7 @@ class Quote:
         """
         # examples:
         # sym    last   d/m/y     time        change  open   high   low    volume
-        # MSFT,  30.49,	6/15/2007,4:00:00 PM, -0.03,  30.88, 30.88, 30.43, 100941384
+        # MSFT,  30.49, 6/15/2007,4:00:00 PM, -0.03,  30.88, 30.88, 30.43, 100941384
         # TEL.NZ,4.620, 6/15/2007,12:58am,    0.000,  4.640, 4.640, 4.590, 3692073
 
         items = csv.reader([line]).next()

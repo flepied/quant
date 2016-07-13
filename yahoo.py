@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-LICENSE="""
+
+LICENSE = """
 Copyright (C) 2011  Michael Ihde
 
 This program is free software; you can redistribute it and/or
@@ -19,11 +20,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 import os
 import datetime
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
-import matplotlib.ticker as ticker
 import matplotlib.dates as dates
 from pycommando.commando import command
-from utils.YahooQuote import *
+from utils.YahooQuote import CACHE
+from utils.YahooQuote import QuoteDate
+from utils.YahooQuote import Market
+
 
 @command("db_ls")
 def list():
@@ -31,6 +33,7 @@ def list():
     Lists the symbols that are in the database
     """
     return Market().cache.symbols()
+
 
 @command("db_up")
 def update(symbol):
@@ -41,18 +44,20 @@ def update(symbol):
     market = Market()
     try:
         ticker = market[symbol]
-        if ticker != None:
+        if ticker is not None:
             ticker.updateHistory()
     except IndexError:
         market.updateHistory()
+
 
 @command("db_flush")
 def flush():
     """
     Completely removes the yahoo cache
     """
-    os.remove(YahooQuote.CACHE) 
+    os.remove(CACHE)
     Market()._dbInit()
+
 
 @command("db_load")
 def load(symbol=None):
@@ -63,12 +68,13 @@ def load(symbol=None):
     cache all major indexes from 1950 until today.
     """
     market = Market()
-    if symbol == None:
+    if symbol is None:
         market.fetchHistory()
     else:
         ticker = market[symbol]
-        if ticker != None:
+        if ticker is not None:
             ticker.fetchHistory()
+
 
 @command("db_fetch")
 def fetch(symbol, start="today", end="today"):
@@ -79,7 +85,8 @@ def fetch(symbol, start="today", end="today"):
         day_start = datetime.date.today()
     else:
         day_start = datetime.datetime.strptime(start, "%Y-%m-%d")
-    day_start = (day_start.year * 10000) + (day_start.month * 100) + day_start.day
+    day_start = ((day_start.year * 10000) + (day_start.month * 100)
+                 + day_start.day)
 
     if end.upper() == "TODAY":
         day_end = None
@@ -88,11 +95,12 @@ def fetch(symbol, start="today", end="today"):
         day_end = (day_end.year * 10000) + (day_end.month * 100) + day_end.day
 
     ticker = Market()[symbol]
-    if ticker != None:
-        if day_end == None:
+    if ticker is not None:
+        if day_end is None:
             return ticker[day_start]
         else:
             return ticker[day_start:day_end]
+
 
 @command("db_plot")
 def plot(symbol, start, end):
