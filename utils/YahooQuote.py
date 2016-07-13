@@ -71,7 +71,7 @@ import time
 import urllib
 import weakref
 
-Y2KCUTOFF=60
+Y2KCUTOFF = 60
 __version__ = "0.4"
 
 CACHE = '~/.quant/stocks.db'
@@ -297,7 +297,6 @@ class Market:
             for stocksym in idx.components:
                 self.symbolIndex[stocksym] = symbol
         logging.debug("  index components loaded")
-
 
     def __getitem__(self, symbol):
         """
@@ -533,7 +532,7 @@ class Ticker:
         if len(quotes) != expectedQuotes:
             self._fetch(wantDate, priorDate)
             quotes = self.market.cache.get(self.symbol, wantDate, priorDate)
-       
+
         if isinstance(date, slice):
             return quotes
         else:
@@ -645,7 +644,7 @@ class Ticker:
         else:
             endDay = QuoteDate(start)
 
-        cursor = self.market.cache.purge(self.symbol)
+        self.market.cache.purge(self.symbol)
 
         try:
             # now get the whole history, lock stock and barrel
@@ -664,7 +663,7 @@ class Ticker:
         if end is None:
             end = QuoteDate.now()
         if start is None:
-            cursor = self.market.db
+            cursor = self.market.cache.db.cursor()
             lastdate = cursor.execute("select MAX(date) from history "
                                       "where (symbol='%s')" %
                                       self.symbol).fetchone()[0]
@@ -802,7 +801,6 @@ class Quote:
         else:
             change = float(change)
         open = float(open)
-        close = last
         high = float(high)
         low = float(low)
         volume = float(volume)
@@ -825,13 +823,13 @@ class Quote:
         Static method - Constructs a L{Quote} object from a given sqlite row
         """
         return Quote(symbol=row[1],
-                    date=row[2],
-                    open=row[3],
-                    close=row[4],
-                    low=row[5],
-                    high=row[6],
-                    volume=row[7],
-                    adjclose=row[8])
+                     date=row[2],
+                     open=row[3],
+                     close=row[4],
+                     low=row[5],
+                     high=row[6],
+                     volume=row[7],
+                     adjclose=row[8])
 
     fromRow = staticmethod(fromRow)
 
